@@ -6,9 +6,17 @@ const router = express.Router();
 // Create a new subscription
 router.post('/', async (req, res) => {
     try {
+        const { term, domain, userId, modules } = req.body;
+
         const subscription = await prisma.subscription.create({
-            data: req.body,
+            data: {
+                term,
+                domain,
+                user: { connect: { id: userId } },
+                modules: { connect: modules.map(moduleId => ({ id: moduleId })) },
+            },
         });
+
         res.status(201).json(subscription);
     } catch (error) {
         res.status(500).json({ error: error.message });

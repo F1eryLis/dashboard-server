@@ -95,8 +95,6 @@ const models = [
     'user',
     'subscription',
     'module',
-    'userSubscription',
-    'subscriptionModule',
 ];
 
 // Generate CRUD routes for each model

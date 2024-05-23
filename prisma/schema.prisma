@@ -8,46 +8,59 @@ generator client {
 }
 
 model User {
-  id                Int                @id @default(autoincrement())
-  username          String             @unique
-  password          String
-  email             String             @unique
-  userSubscriptions UserSubscription[]
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  username          String?
+  roles         UserRole[]
+  subscriptions Subscription[] 
 }
 
-model Subscription {
-  id                  Int                  @id @default(autoincrement())
-  term                String
-  domain              String
-  userSubscriptions   UserSubscription[]
-  subscriptionModules SubscriptionModule[]
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  roles       RolePermission[]
+}
+
+model UserRole {
+  userId  Int
+  roleId  Int
+
+  user  User  @relation(fields: [userId], references: [id])
+  role  Role  @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
 }
 
 model Module {
-  id                  Int                  @id @default(autoincrement())
-  name                String
-  styles              String?
-  subscriptionModules SubscriptionModule[]
+  id          Int            @id @default(autoincrement())
+  name        String
+  styles      String?
+  script      String?
+  subscriptions Subscription[] @relation("ModuleSubscriptions")
 }
 
-model UserSubscription {
-  id             Int @id @default(autoincrement())
-  userId         Int
-  subscriptionId Int
-
-  user         User         @relation(fields: [userId], references: [id])
-  subscription Subscription @relation(fields: [subscriptionId], references: [id])
-
-  @@unique([userId, subscriptionId])
-}
-
-model SubscriptionModule {
-  id             Int @id @default(autoincrement())
-  subscriptionId Int
-  moduleId       Int
-
-  subscription Subscription @relation(fields: [subscriptionId], references: [id])
-  module       Module       @relation(fields: [moduleId], references: [id])
-
-  @@unique([subscriptionId, moduleId])
+model Subscription {
+  id       Int            @id @default(autoincrement())
+  term     String
+  domain   String
+  userId   Int
+  user     User     @relation(fields: [userId], references: [id])
+  modules  Module[] @relation("ModuleSubscriptions")
 }
