@@ -58,7 +58,8 @@ model Module {
 
 model Subscription {
   id       Int            @id @default(autoincrement())
-  term     String
+  dateTo   DateTime
+  dateFrom DateTime
   domain   String
   userId   Int
   user     User     @relation(fields: [userId], references: [id])

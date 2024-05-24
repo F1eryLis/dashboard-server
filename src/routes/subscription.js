@@ -6,11 +6,12 @@ const router = express.Router();
 // Create a new subscription
 router.post('/', async (req, res) => {
     try {
-        const { term, domain, userId, modules } = req.body;
+        const { dateTo, dateFrom, domain, userId, modules } = req.body;
 
         const subscription = await prisma.subscription.create({
             data: {
-                term,
+                dateTo: new Date(dateTo).toISOString(),
+                dateFrom: new Date(dateFrom).toISOString(),
                 domain,
                 user: { connect: { id: userId } },
                 modules: { connect: modules.map(moduleId => ({ id: moduleId })) },
@@ -36,6 +37,9 @@ router.get('/', async (req, res) => {
             skip,
             take,
             orderBy,
+            include: {
+                modules: true,
+            }
         });
 
         res.header('Access-Control-Expose-Headers', 'X-Total-Count');
@@ -45,7 +49,20 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
+router.get('/getByDomain', async (req, res) => {
+    try {
+        // const url = req.headers['referer'];
+        const subscription = await prisma.subscription.findUnique({
+            where: {
+                domain: req.headers['referer'],
+            }
+        });
+        if(!subscription) res.status(404).send('Not found');
+        res.status(200).json(subscription);
+    } catch(error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Get a specific subscription
 router.get('/:id', async (req, res) => {
     try {
@@ -59,18 +76,36 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Update a subscription
 router.put('/:id', async (req, res) => {
     try {
+        const { dateTo, dateFrom, domain, userId, modules } = req.body;
+        const { id } = req.params;
+
         const subscription = await prisma.subscription.update({
-            where: { id: parseInt(req.params.id) },
-            data: req.body,
+            where: {
+                id: parseInt(id)
+            },
+            data: {
+                dateTo: new Date(dateTo).toISOString(),
+                dateFrom: new Date(dateFrom).toISOString(),
+                domain: domain,
+                user: {
+                    connect: {
+                        id: userId
+                    }
+                },
+                modules: {
+                    connect: modules.map(moduleId => ({ id: moduleId }))
+                }
+            }
         });
-        res.status(200).json(subscription);
+
+        res.json(subscription);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // Delete a subscription
 router.delete('/:id', async (req, res) => {
