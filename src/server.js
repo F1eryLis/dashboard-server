@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const prisma = require('./prisma');
 const userRoutes = require('./routes/user');
 const subscriptionRoutes = require('./routes/subscription');
-const subscriptionModuleRoutes = require('./routes/subscriptionModule');
 const moduleRoutes = require('./routes/module');
 const cors = require('cors');
 const app = express();
@@ -14,6 +13,7 @@ app.use(bodyParser.json());
 app.use('/users', userRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/modules', moduleRoutes);
+
 
 
 const PORT = process.env.PORT || 3000;
