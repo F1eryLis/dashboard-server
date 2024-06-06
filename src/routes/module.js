@@ -3,6 +3,8 @@ const express = require('express');
 const prisma = require('../prisma');
 const router = express.Router();
 
+const auth = require('../middleware/auth');
+
 // Create a new module
 router.post('/', async (req, res) => {
     try {
@@ -16,19 +18,41 @@ router.post('/', async (req, res) => {
 });
 
 // Get all modules with query parameters
-router.get('/', async (req, res) => {
+router.get('/', auth.authenticateJWT, auth.authorizeRoles(['Admin', 'Agency']), async (req, res) => {
     try {
         const { _start, end, _sort, _order } = req.query;
         const skip = _start ? parseInt(_start) : 0;
         const take = end ? parseInt(end) - skip : undefined;
         const orderBy = _sort ? { [_sort]: _order?.toLowerCase() || 'asc' } : undefined;
 
+        let modules;
+        if(req.user.roles.includes('Admin')) {
+            modules = await prisma.module.findMany({
+                take,
+                skip,
+                orderBy
+            });
+        } else if (req.user.roles.includes('Agency')) {
+            if(req.user.agency) {
+                const subscription = await prisma.subscription.findMany({
+                    where: { agencyId: req.user.agency },
+                    include: {
+                        modules: true
+                    }
+                });
+    
+                modules = subscription.flatMap(sub => sub.modules);
+            } else modules = []
+        } else {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
         const totalCount = await prisma.module.count();
-        const modules = await prisma.module.findMany({
-            skip,
-            take,
-            orderBy,
-        });
+        // const modules = await prisma.module.findMany({
+        //     skip,
+        //     take,
+        //     orderBy,
+        // });
 
         res.header('Access-Control-Expose-Headers', 'X-Total-Count');
         res.header('X-Total-Count', totalCount);

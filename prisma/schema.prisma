@@ -8,32 +8,91 @@ generator client {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  email         String         @unique
-  username          String?
-  roles         UserRole[]
-  subscriptions Subscription[] 
+  id       Int           @id @default(autoincrement())
+  email    String        @unique
+  password String
+  username String
+  phone    String?
+  role     UserRole[]
+  agency   UserAgency?
+  employee UserEmployee?
+  client   UserClient?
+  order    Order[]
+}
+
+model Agency {
+  id           Int            @id @default(autoincrement())
+  agencyName   String
+  domain       String
+  subscription Subscription[]
+  owner        UserAgency?
+  employee     UserEmployee[]
+  client       UserClient[]
+  order        UserOrder[]
+}
+
+model UserAgency {
+  userId   Int    @unique
+  agencyId Int    @unique
+  User     User   @relation(fields: [userId], references: [id])
+  Agency   Agency @relation(fields: [agencyId], references: [id])
+  @@id([userId, agencyId])
+}
+
+model UserEmployee {
+  userId   Int    @unique
+  agencyId Int    
+  User     User   @relation(fields: [userId], references: [id])
+  Agency   Agency @relation(fields: [agencyId], references: [id])
+  @@id([userId, agencyId])
+}
+
+model UserClient {
+  userId   Int    @unique
+  agencyId Int    
+  User     User   @relation(fields: [userId], references: [id])
+  Agency   Agency @relation(fields: [agencyId], references: [id])
+  @@id([userId, agencyId])
+}
+
+model UserOrder {
+  orderId  Int    @unique
+  agencyId Int    
+  Order    Order  @relation(fields: [orderId], references: [id])
+  Agency   Agency @relation(fields: [agencyId], references: [id])
+  @@id([orderId, agencyId])
+}
+
+model Order {
+  id        Int        @id @default(autoincrement())
+  client    User       @relation(fields: [clientId], references: [id])
+  clientId  Int
+  userOrder UserOrder?
+  status    String     @default("yis")
+  details   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Role {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
   permissions RolePermission[]
   users       UserRole[]
 }
 
 model Permission {
-  id          Int              @id @default(autoincrement())
-  name        String           @unique
-  roles       RolePermission[]
+  id    Int              @id @default(autoincrement())
+  name  String           @unique
+  roles RolePermission[]
 }
 
 model UserRole {
-  userId  Int
-  roleId  Int
+  userId Int
+  roleId Int
 
-  user  User  @relation(fields: [userId], references: [id])
-  role  Role  @relation(fields: [roleId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
 
   @@id([userId, roleId])
 }
@@ -49,19 +108,19 @@ model RolePermission {
 }
 
 model Module {
-  id          Int            @id @default(autoincrement())
-  name        String
-  styles      String?
-  script      String?
+  id            Int            @id @default(autoincrement())
+  name          String
+  styles        String?
+  script        String?
   subscriptions Subscription[] @relation("ModuleSubscriptions")
 }
 
 model Subscription {
-  id       Int            @id @default(autoincrement())
+  id       Int      @id @default(autoincrement())
   dateTo   DateTime
   dateFrom DateTime
-  domain   String
-  userId   Int
-  user     User     @relation(fields: [userId], references: [id])
+  domain   String   @unique
+  agencyId Int
+  agency   Agency   @relation(fields: [agencyId], references: [id])
   modules  Module[] @relation("ModuleSubscriptions")
 }

@@ -1,27 +1,21 @@
-const fs = require('fs');
-const path = require('path');
 
-// Function to generate CRUD routes
-function generateCrud(modelName) {
-    const modelNameCapitalized = modelName.charAt(0).toUpperCase() + modelName.slice(1);
-    const routeTemplate = `
 const express = require('express');
 const prisma = require('../prisma');
 const router = express.Router();
 
-// Create a new ${modelName}
+// Create a new role
 router.post('/', async (req, res) => {
     try {
-        const ${modelName} = await prisma.${modelName}.create({
+        const role = await prisma.role.create({
             data: req.body,
         });
-        res.status(201).json(${modelName});
+        res.status(201).json(role);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Get all ${modelName}s with query parameters
+// Get all roles with query parameters
 router.get('/', async (req, res) => {
     try {
         const { _start, end, _sort, _order } = req.query;
@@ -29,8 +23,8 @@ router.get('/', async (req, res) => {
         const take = end ? parseInt(end) - skip : undefined;
         const orderBy = _sort ? { [_sort]: _order?.toLowerCase() || 'asc' } : undefined;
 
-        const totalCount = await prisma.${modelName}.count();
-        const ${modelName}s = await prisma.${modelName}.findMany({
+        const totalCount = await prisma.role.count();
+        const roles = await prisma.role.findMany({
             skip,
             take,
             orderBy,
@@ -38,42 +32,45 @@ router.get('/', async (req, res) => {
 
         res.header('Access-Control-Expose-Headers', 'X-Total-Count');
         res.header('X-Total-Count', totalCount);
-        res.status(200).json(${modelName}s);
+        res.status(200).json(roles);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Get a specific ${modelName}
+// Get a specific role
 router.get('/:id', async (req, res) => {
     try {
-        const ${modelName} = await prisma.${modelName}.findUnique({
+        const role = await prisma.role.findUnique({
             where: { id: parseInt(req.params.id) },
         });
-        if (!${modelName}) return res.status(404).json({ error: '${modelNameCapitalized} not found' });
-        res.status(200).json(${modelName});
+        if (!role) return res.status(404).json({ error: 'Role not found' });
+        
+        res.header('Access-Control-Expose-Headers', 'X-Total-Count');
+        res.header('X-Total-Count', 1);
+        res.status(200).json(role);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Update a ${modelName}
+// Update a role
 router.put('/:id', async (req, res) => {
     try {
-        const ${modelName} = await prisma.${modelName}.update({
+        const role = await prisma.role.update({
             where: { id: parseInt(req.params.id) },
             data: req.body,
         });
-        res.status(200).json(${modelName});
+        res.status(200).json(role);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Delete a ${modelName}
+// Delete a role
 router.delete('/:id', async (req, res) => {
     try {
-        await prisma.${modelName}.delete({
+        await prisma.role.delete({
             where: { id: parseInt(req.params.id) },
         });
         res.status(204).json();
@@ -83,23 +80,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-`;
-
-    const filePath = path.join(__dirname, 'routes', `${modelName}.js`);
-    fs.writeFileSync(filePath, routeTemplate, 'utf8');
-    console.log(`Generated CRUD routes for ${modelName}`);
-}
-
-// List of models to generate CRUD routes for
-const models = [
-    // 'user',
-    // 'subscription',
-    // 'module',
-    // 'agency',
-    // 'client',
-    // 'order'
-    'role'
-];
-
-// Generate CRUD routes for each model
-models.forEach(model => generateCrud(model));
