@@ -45,7 +45,10 @@ router.get('/', authenticateJWT, authorizeRoles(['Admin', 'Agency']), async (req
           agencys = await prisma.agency.findMany({
             skip,
             take,
-            orderBy
+            orderBy,
+            include: {
+              owner: true
+            }
           });
         } else if(req.user.roles.includes('Agency')) {
           agencys = await prisma.agency.findMany({

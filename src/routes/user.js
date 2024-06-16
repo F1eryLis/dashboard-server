@@ -10,23 +10,23 @@ router.post('/', async (req, res) => {
     try {
         const dataToCreate = {};
 
-        if(req.body.username) {
+        if (req.body.username) {
             dataToCreate.username = req.body.username;
         }
 
-        if(req.body.email) {
+        if (req.body.email) {
             dataToCreate.email = req.body.email;
         }
 
-        if(req.body.password) {
+        if (req.body.password) {
             dataToCreate.password = bcrypt.hashSync(req.body.password, 8);
         }
 
-        if(req.body.phone) {
+        if (req.body.phone) {
             dataToCreate.phone = req.body.phone;
         }
 
-        if(req.body.role) {
+        if (req.body.role) {
             dataToCreate.role = {
                 create: req.body.role.map(roleId => ({
                     role: {
@@ -59,13 +59,16 @@ router.get('/', authenticateJWT, authorizeRoles(['Admin', 'Agency']), async (req
         const orderBy = _sort ? { [_sort]: _order?.toLowerCase() || 'asc' } : undefined;
 
         let users;
-        if(req.user.roles.includes('Admin')) {
+        if (req.user.roles.includes('Admin')) {
             users = await prisma.user.findMany({
                 skip,
                 take,
-                orderBy
+                orderBy,
+                include: {
+                    role: true
+                }
             });
-        } else if(req.user.roles.includes('Agency')) {
+        } else if (req.user.roles.includes('Agency')) {
             users = await prisma.user.findMany({
                 where: { agency: req.user.agency },
                 skip,
@@ -107,12 +110,95 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+router.get('/auth/me', authenticateJWT, authorizeRoles(['Admin', 'Agency']), async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: parseInt(req.user.id) },
+            // include: {
+            //     role: true
+            // },
+            select: {
+                id: true,
+                email: true,
+                username: true,
+                phone: true,
+                role: true,
+                agency: true,
+                client: true,
+                employee: true,
+                order: true
+            }
+        });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update a user
 router.put('/:id', async (req, res) => {
     try {
+        const dataToUpdate = {};
+
+        if (req.body.username) {
+            dataToUpdate.username = req.body.username;
+        }
+
+        if (req.body.email) {
+            dataToUpdate.email = req.body.email;
+        }
+
+        if (req.body.phone) {
+            dataToUpdate.phone = req.body.phone;
+        }
+
+        if (req.body.role) {
+            const roleIds = req.body.role.map((role) => role.roleId);
+            console.log(roleIds);
+
+            const existingRoles = await prisma.userRole.findMany({
+                where: { userId: parseInt(req.params.id) },
+                select: { roleId: true }
+            });
+
+            const existingRoleIds = existingRoles.map((r) => r.roleId);
+            console.log(existingRoleIds);
+
+            const rolesToAdd = roleIds.filter((id) => !existingRoleIds.includes(id));
+            const rolesToRemove = existingRoleIds.filter((id) => !roleIds.includes(id));
+            console.log('Roles to add:', rolesToAdd);
+            console.log('Roles to remove:', rolesToRemove);
+
+            // Add new roles
+            for (const roleId of rolesToAdd) {
+                await prisma.userRole.create({
+                    data: {
+                        userId: parseInt(req.params.id),
+                        roleId: roleId,
+                    }
+                });
+            }
+
+            // Remove old roles
+            for (const roleId of rolesToRemove) {
+                await prisma.userRole.delete({
+                    where: {
+                        userId_roleId: {
+                            userId: parseInt(req.params.id),
+                            roleId: roleId,
+                        }
+                    }
+                });
+            }
+        }
+
         const user = await prisma.user.update({
             where: { id: parseInt(req.params.id) },
-            data: req.body,
+            data: dataToUpdate,
+            include: {
+                role: true
+            }
         });
         res.status(200).json(user);
     } catch (error) {
@@ -125,6 +211,9 @@ router.delete('/:id', async (req, res) => {
     try {
         await prisma.user.delete({
             where: { id: parseInt(req.params.id) },
+            include: {
+                role: true
+            }
         });
         res.status(204).json();
     } catch (error) {

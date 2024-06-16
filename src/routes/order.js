@@ -30,7 +30,10 @@ router.get('/', auth.authenticateJWT, auth.authorizeRoles(['Admin', 'Agency', 'C
             orders = await prisma.order.findMany({
                 skip,
                 take,
-                orderBy
+                orderBy,
+                include: {
+                    userOrder: true,
+                }
             });
         } else if (req.user.roles.includes('Agency')) {
             orders = await prisma.order.findMany({
